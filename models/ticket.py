@@ -1,5 +1,5 @@
-from pydantic import BaseModel
 from datetime import datetime
+from pydantic import BaseModel
 
 
 class TicketPlace(BaseModel):
@@ -10,4 +10,4 @@ class TicketPlace(BaseModel):
     price: float
     booking_time: datetime = None
     payment_time: datetime = None
-    #comment
+    # comment

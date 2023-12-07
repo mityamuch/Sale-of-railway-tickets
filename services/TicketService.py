@@ -1,9 +1,7 @@
 from datetime import datetime
-
-from pymongo import ReturnDocument
-
-from models.ticket import TicketPlace
 from typing import List
+from pymongo import ReturnDocument
+from models.ticket import TicketPlace
 from utils.elasticsearch_connector import search_trains
 from utils.hazelcast_connector import lock_ticket, unlock_ticket
 from utils.mongo_setup import db
@@ -12,8 +10,11 @@ from utils.mongo_setup import db
 class TicketService:
 
     @staticmethod
-    def search_tickets(departure_station: str, arrival_station: str, departure_date: datetime) -> List[TicketPlace]:
-        trains = search_trains(departure_station, arrival_station, departure_date)
+    def search_tickets(departure_station: str,
+                       arrival_station: str, departure_date: datetime) -> List[TicketPlace]:
+        trains = search_trains(departure_station,
+                               arrival_station,
+                               departure_date)
         tickets = []
 
         for train in trains:
@@ -52,8 +53,8 @@ class TicketService:
                 print(f"Error updating ticket: {e}")
                 unlock_ticket(ticket_id)
                 return False
-        else:
-            return False
+
+        return False
 
     @staticmethod
     def purchase_ticket(ticket_id: int) -> bool:
@@ -82,9 +83,9 @@ class TicketService:
             except Exception as e:
                 print(f"Error purchasing ticket: {e}")
                 return False
-        else:
-            print("Payment failed")
-            return False
+
+        print("Payment failed")
+        return False
 
     @staticmethod
     async def get_ticket(ticket_id):
