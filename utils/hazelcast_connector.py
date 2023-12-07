@@ -1,6 +1,6 @@
+import logging
 import coloredlogs
 import hazelcast
-import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("hazelcast")
@@ -36,6 +36,7 @@ def get_cached_station(station_id):
         return station_data
     except Exception as e:
         logger.error(f"Error retrieving station data for station ID {station_id}: {e}")
+        return None
 
 
 def lock_ticket(ticket_id):
@@ -44,9 +45,8 @@ def lock_ticket(ticket_id):
         if tickets_lock.try_lock():
             logger.info(f"Ticket ID {ticket_id} locked successfully.")
             return True
-        else:
-            logger.warning(f"Ticket ID {ticket_id} is already locked.")
-            return False
+        logger.warning(f"Ticket ID {ticket_id} is already locked.")
+        return False
     except Exception as e:
         logger.error(f"Error locking ticket ID {ticket_id}: {e}")
         return False
