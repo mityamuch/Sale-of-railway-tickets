@@ -1,46 +1,90 @@
 from datetime import datetime
-from models.ticket import TicketPlace
-from services.es_service import search_trains
-from services.hazelcast_service import lock_ticket, unlock_ticket
-from typing import List
 
-from services.mongo_service import db
+from pymongo import ReturnDocument
+
+from models.ticket import TicketPlace
+from typing import List
+from utils.elasticsearch_connector import search_trains
+from utils.hazelcast_connector import lock_ticket, unlock_ticket
+from utils.mongo_setup import db
 
 
 class TicketService:
 
     @staticmethod
     def search_tickets(departure_station: str, arrival_station: str, departure_date: datetime) -> List[TicketPlace]:
-        # Используем ElasticSearch для получения списка доступных поездов
         trains = search_trains(departure_station, arrival_station, departure_date)
+        tickets = []
 
-        # Здесь может быть логика преобразования данных из ElasticSearch в модели TicketPlace, если это необходимо
+        for train in trains:
+            try:
+                # Получение билетов для каждого поезда из MongoDB
+                train_tickets = db.ticket_places.find({"train_id": train["train_id"], "status": "free"})
+                for ticket in train_tickets:
+                    tickets.append(TicketPlace(**ticket))
+            except Exception as e:
+                print(f"Error fetching tickets for train {train['train_id']}: {e}")
 
-        return trains
+        return tickets
 
     @staticmethod
-    def book_ticket(ticket_id: int) -> bool:
-        # Используем Hazelcast для блокировки места
+    async def book_ticket(ticket_id: int) -> bool:
         if lock_ticket(ticket_id):
-            # Если блокировка успешно установлена, сохраняем статус билета как "booked" в MongoDB
-            # TODO: Сохранение статуса билета в MongoDB
-            return True
-        return False
+            try:
+                update_data = {
+                    "$set": {
+                        "status": "booked",
+                        "booking_time": datetime.now()
+                    }
+                }
+                updated_ticket = await db.ticket_places.find_one_and_update(
+                    {"ticket_id": ticket_id},
+                    update_data,
+                    return_document=ReturnDocument.AFTER
+                )
+
+                if updated_ticket:
+                    return True
+                else:
+                    unlock_ticket(ticket_id)
+                    return False
+            except Exception as e:
+                print(f"Error updating ticket: {e}")
+                unlock_ticket(ticket_id)
+                return False
+        else:
+            return False
 
     @staticmethod
     def purchase_ticket(ticket_id: int) -> bool:
-        # Здесь будет логика оплаты билета. После успешной оплаты:
-        # 1. Сохраняем статус билета как "purchased" в MongoDB
-        # 2. Снимаем блокировку в Hazelcast
-
-        # TODO: Реализовать логику оплаты
         payment_successful = True  # Заглушка
 
         if payment_successful:
-            # TODO: Сохранение статуса билета в MongoDB
-            unlock_ticket(ticket_id)
-            return True
-        return False
+            try:
+                update_data = {
+                    "$set": {
+                        "status": "purchased",
+                        "payment_time": datetime.now()
+                    }
+                }
+                updated_ticket = db.ticket_places.find_one_and_update(
+                    {"ticket_id": ticket_id},
+                    update_data,
+                    return_document=ReturnDocument.AFTER
+                )
+
+                if updated_ticket:
+                    unlock_ticket(ticket_id)
+                    return True
+                else:
+                    print(f"Ticket with ID {ticket_id} not found for purchase.")
+                    return False
+            except Exception as e:
+                print(f"Error purchasing ticket: {e}")
+                return False
+        else:
+            print("Payment failed")
+            return False
 
     @staticmethod
     async def get_ticket(ticket_id):
@@ -49,3 +93,7 @@ class TicketService:
     @staticmethod
     async def update_ticket_status(ticket_id, status):
         await db.tickets.update_one({"_id": ticket_id}, {"$set": {"status": status}})
+
+    @staticmethod
+    async def add_ticket(ticket_data):
+        return await db.tickets.insert_one(ticket_data)

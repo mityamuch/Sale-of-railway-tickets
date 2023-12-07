@@ -1,0 +1,32 @@
+mongos:
+    image: mongo:latest
+    command: mongos --configdb configdb/localhost:27019 --bind_ip_all
+    ports:
+      - 27017:27017
+    depends_on:
+      - configsvr
+    networks:
+      - elasticnet
+
+  configsvr:
+    image: mongo:latest
+    command: mongod --configsvr --replSet configdb --bind_ip_all
+    volumes:
+      - mongodata-config:/data/configdb
+    networks:
+      - elasticnet
+
+  shard1:
+    image: mongo:latest
+    command: mongod --shardsvr --replSet shard1 --dbpath /data/db --bind_ip_all
+    volumes:
+      - mongodata-shard1:/data/db
+    networks:
+      - elasticnet
+
+  # Дополнительные шарды (shard2, shard3, ...) по аналогии с shard1 при необходимости
+
+volumes:
+  mongodata-config:
+  mongodata-shard1:
+  # Дополнительные тома для дополнительных шардов по аналогии с mongodata-shard1 при необходимости

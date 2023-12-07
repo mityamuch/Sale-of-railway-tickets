@@ -1,4 +1,4 @@
-from services.mongo_service import db
+from utils.mongo_setup import db
 
 
 class RouteService:

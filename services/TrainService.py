@@ -1,10 +1,12 @@
-from services.mongo_service import db
+from utils.elasticsearch_connector import search_trains, add_train_to_index
+from utils.mongo_setup import db
 
 
 class TrainService:
 
     @staticmethod
     async def initialize_train(train_data):
+        add_train_to_index(train_data)
         await db.trains.insert_one(train_data)
 
     @staticmethod
@@ -13,11 +15,7 @@ class TrainService:
 
     @staticmethod
     async def get_available_trains(departure_station_id, arrival_station_id, departure_date):
-        return await db.trains.find({
-            "departure_station_id": departure_station_id,
-            "arrival_station_id": arrival_station_id,
-            "departure_date": {"$gte": departure_date}
-        }).to_list(length=100)  # Здесь ограничиваем результат 100 записями для примера
+        return search_trains(departure_station_id, arrival_station_id, departure_date)
 
     @staticmethod
     async def update_train(train_id, train_data):
