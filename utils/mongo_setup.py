@@ -16,7 +16,7 @@ def setup_sharding():
     admin_db = sync_client["admin"]
 
     # Включаем шардинг для базы данных
-    admin_db.command("enableSharding", "your_database_name")
+    admin_db.command("enableSharding", "railway_ticket_system")
 
     # Устанавливаем ключ шардинга для коллекции
     sdb.command("shardCollection", "railway_ticket_system", key={"station_id": 1})
