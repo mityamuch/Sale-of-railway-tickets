@@ -20,7 +20,8 @@ class TicketService:
         for train in trains:
             try:
                 # Получение билетов для каждого поезда из MongoDB
-                train_tickets = db.ticket_places.find({"train_id": train["train_id"], "status": "free"})
+                train_tickets = db.ticket_places.find({"train_id": train["train_id"],
+                                                       "status": "free"})
                 for ticket in train_tickets:
                     tickets.append(TicketPlace(**ticket))
             except Exception as e:
@@ -46,9 +47,9 @@ class TicketService:
 
                 if updated_ticket:
                     return True
-                else:
-                    unlock_ticket(ticket_id)
-                    return False
+
+                unlock_ticket(ticket_id)
+                return False
             except Exception as e:
                 print(f"Error updating ticket: {e}")
                 unlock_ticket(ticket_id)
@@ -77,9 +78,9 @@ class TicketService:
                 if updated_ticket:
                     unlock_ticket(ticket_id)
                     return True
-                else:
-                    print(f"Ticket with ID {ticket_id} not found for purchase.")
-                    return False
+
+                print(f"Ticket with ID {ticket_id} not found for purchase.")
+                return False
             except Exception as e:
                 print(f"Error purchasing ticket: {e}")
                 return False
