@@ -36,7 +36,7 @@ def create_train_index():
         response = client.indices.create(index="trains", body=body, ignore=400)
         logger.info("Train index created successfully.")
         return response
-    except exceptions.Any as e:
+    except Exception as e:
         logger.error(f"Error creating train index: {e}")
         return None
 

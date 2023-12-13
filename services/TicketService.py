@@ -75,9 +75,9 @@ class TicketService:
                     return_document=ReturnDocument.AFTER
                 )
 
-                if updated_ticket:
-                    unlock_ticket(ticket_id)
-                    return True
+                #if updated_ticket:
+                    #unlock_ticket(ticket_id)
+                    #return True
 
                 print(f"Ticket with ID {ticket_id} not found for purchase.")
                 return False
