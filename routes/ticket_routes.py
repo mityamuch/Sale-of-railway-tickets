@@ -2,26 +2,48 @@ from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, HTTPException
-from models.ticket import TicketPlace
+from models.ticket import TicketPlace, TicketNotFoundException, TicketAlreadyBookedException, TicketLockFailedException, \
+    TicketUpdateException, TicketNotBookedException, TicketPurchaseFailedException
 from services.TicketService import TicketService
 
 router = APIRouter()
 
 
-@router.post("/book/{ticket_id}", response_model=TicketPlace)
-async def book_ticket(ticket_id: int) -> TicketPlace:
-    (result, success) = await TicketService.book_ticket(ticket_id)
-    if success:
-        return TicketPlace(**result)
-    raise HTTPException(status_code=501, detail="Ошибка блокировки")
+@router.post("/book/{ticket_id}", response_model=bool, responses={
+    404: {"description": "Билет не найден"},
+    400: {"description": "Билет уже забронирован или куплен"},
+    503: {"description": "Не удалось заблокировать билет"},
+    500: {"description": "Ошибка сервера"},
+})
+async def book_ticket(ticket_id: int):
+    try:
+        result = await TicketService.book_ticket(ticket_id)
+        return result
+    except TicketNotFoundException:
+        raise HTTPException(status_code=404, detail="Билет не найден")
+    except TicketAlreadyBookedException:
+        raise HTTPException(status_code=400, detail="Билет уже забронирован или куплен")
+    except TicketLockFailedException:
+        raise HTTPException(status_code=503, detail="Не удалось заблокировать билет")
+    except TicketUpdateException as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/purchase/{ticket_id}", response_model=bool)
+@router.post("/purchase/{ticket_id}", response_model=bool, responses={
+    404: {"description": "Билет не найден"},
+    400: {"description": "Билет не забронирован или уже куплен"},
+    500: {"description": "Ошибка произведения оплаты"},
+})
 async def purchase_ticket(ticket_id: int):
-    (result, success) = await TicketService.purchase_ticket(ticket_id)
-    if result:
-        return TicketPlace(**result)
-    raise HTTPException(status_code=501, detail="Ошибка покупки")
+    try:
+        result = await TicketService.purchase_ticket(ticket_id)
+        return result
+    except TicketNotFoundException:
+        raise HTTPException(status_code=404, detail="Билет не найден")
+    except TicketNotBookedException:
+        raise HTTPException(status_code=400, detail="Билет не забронирован или уже куплен")
+    except TicketPurchaseFailedException as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/search-tickets/", response_model=List[TicketPlace])

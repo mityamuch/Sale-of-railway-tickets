@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import List
 from pymongo import ReturnDocument
-from models.ticket import TicketPlace
+from models.ticket import TicketPlace, TicketUpdateException, TicketLockFailedException, TicketAlreadyBookedException, \
+    TicketNotFoundException, TicketPurchaseFailedException, TicketNotBookedException
 from utils.elasticsearch_connector import search_trains
 from utils.hazelcast_connector import lock_ticket, unlock_ticket
 from utils.mongo_setup import db
@@ -30,43 +31,47 @@ class TicketService:
         return tickets
 
     @staticmethod
-    async def book_ticket(ticket_id: int) -> (TicketPlace, bool):
-        if lock_ticket(ticket_id):
-            try:
-                update_data = {
-                    "$set": {
-                        "status": "booked",
-                        "booking_time": datetime.now()
-                    }
-                }
-                updated_ticket = await db.tickets.find_one_and_update(
-                    {"ticket_id": ticket_id},
-                    update_data,
-                    return_document=ReturnDocument.AFTER
-                )
+    async def book_ticket(ticket_id: int) -> bool:
+        result = await db.tickets.find_one({"ticket_id": ticket_id})
+        if not result:
+            raise TicketNotFoundException("Билет не найден")
 
-                if updated_ticket:
-                    unlock_ticket(ticket_id)
-                    return updated_ticket, True
-                return None, False
-            except Exception as e:
-                print(f"Error updating ticket: {e}")
-                return None, False
-            finally:
-                unlock_ticket(ticket_id)
+        if result["status"] != "free":
+            raise TicketAlreadyBookedException("Билет уже забронирован")
+
+        if not lock_ticket(ticket_id):
+            raise TicketLockFailedException("Не удалось заблокировать билет")
+
+        try:
+            update_data = {"$set": {"status": "booked", "booking_time": datetime.now()}}
+            updated_ticket = await db.tickets.find_one_and_update(
+                {"ticket_id": ticket_id},
+                update_data,
+                return_document=ReturnDocument.AFTER
+            )
+            if updated_ticket:
+                return True
+            raise TicketUpdateException("Ошибка при обновлении билета")
+        except Exception as e:
+            print(f"Error updating ticket: {e}")
+            raise TicketUpdateException(f"Внутренняя ошибка сервера: {e}")
+        finally:
+            unlock_ticket(ticket_id)
 
     @staticmethod
-    async def purchase_ticket(ticket_id: int) -> (TicketPlace, bool):
+    async def purchase_ticket(ticket_id: int) -> bool:
         payment_successful = True  # Заглушка
         result = await db.tickets.find_one({"ticket_id": ticket_id})
-        if payment_successful and result["status"] == 'booked':
+
+        if not result:
+            raise TicketNotFoundException("Билет не найден")
+
+        if result["status"] != 'booked':
+            raise TicketNotBookedException("Билет не забронирован")
+
+        if payment_successful:
             try:
-                update_data = {
-                    "$set": {
-                        "status": "purchased",
-                        "payment_time": datetime.now()
-                    }
-                }
+                update_data = {"$set": {"status": "purchased", "payment_time": datetime.now()}}
                 updated_ticket = await db.tickets.find_one_and_update(
                     {"ticket_id": ticket_id},
                     update_data,
@@ -74,14 +79,13 @@ class TicketService:
                 )
 
                 if updated_ticket:
-                    return updated_ticket, True
+                    return True
 
-                print(f"Ticket with ID {ticket_id} not found for purchase.")
-                return None, False
+                raise TicketPurchaseFailedException("Ошибка при покупке билета")
             except Exception as e:
-                print(f"Error purchasing ticket: {e}")
-                return None, False
-        return None, False
+                raise TicketPurchaseFailedException(f"Ошибка при покупке билета: {e}")
+        else:
+            raise TicketPurchaseFailedException("Оплата не прошла")
 
     @staticmethod
     async def get_ticket(ticket_id):

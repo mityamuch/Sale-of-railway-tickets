@@ -11,3 +11,27 @@ class TicketPlace(BaseModel):
     booking_time: datetime = None
     payment_time: datetime = None
     # comment
+
+
+class TicketNotFoundException(Exception):
+    pass
+
+
+class TicketAlreadyBookedException(Exception):
+    pass
+
+
+class TicketLockFailedException(Exception):
+    pass
+
+
+class TicketUpdateException(Exception):
+    pass
+
+
+class TicketNotBookedException(Exception):
+    pass
+
+
+class TicketPurchaseFailedException(Exception):
+    pass

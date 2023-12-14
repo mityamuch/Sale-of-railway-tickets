@@ -6,10 +6,10 @@ import requests
 
 def generate_train_data(train_id):
     return {
-        "station_id": train_id,
+        "train_id": train_id,
         "route_id": random.choice([i for i in range(0, 50)]),
-        "departure_date": datetime.datetime.now(),
-        "arrival_date": datetime.datetime.now()
+        "departure_date": str(datetime.datetime.now()),
+        "arrival_date": str(datetime.datetime.now())
     }
 
 
@@ -24,9 +24,9 @@ def main():
         station_data = generate_train_data(train_id)
         response = requests.post(url, json=station_data, headers=headers)
         if response.status_code == 200:
-            print(f"Станция {train_id} успешно добавлена.")
+            print(f"Поезд {train_id} успешно добавлен.")
         else:
-            print(f"Ошибка при добавлении станции {train_id}: {response.text}")
+            print(f"Ошибка при добавлении поезда {train_id}: {response.text}")
 
 
 if __name__ == "__main__":
