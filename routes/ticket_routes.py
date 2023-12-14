@@ -8,20 +8,20 @@ from services.TicketService import TicketService
 router = APIRouter()
 
 
-@router.post("/book/{ticket_id}", response_model=bool)
-async def book_ticket(ticket_id: int) -> bool:
-    result = await TicketService.book_ticket(ticket_id)
-    if result:
-        return True
-    return False
+@router.post("/book/{ticket_id}", response_model=TicketPlace)
+async def book_ticket(ticket_id: int) -> TicketPlace:
+    (result, success) = await TicketService.book_ticket(ticket_id)
+    if success:
+        return TicketPlace(**result)
+    raise HTTPException(status_code=501, detail="Ошибка блокировки")
 
 
 @router.post("/purchase/{ticket_id}", response_model=bool)
 async def purchase_ticket(ticket_id: int):
-    result = await TicketService.purchase_ticket(ticket_id)
+    (result, success) = await TicketService.purchase_ticket(ticket_id)
     if result:
-        return True
-    return False
+        return TicketPlace(**result)
+    raise HTTPException(status_code=501, detail="Ошибка покупки")
 
 
 @router.get("/search-tickets/", response_model=List[TicketPlace])

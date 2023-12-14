@@ -30,7 +30,7 @@ class TicketService:
         return tickets
 
     @staticmethod
-    async def book_ticket(ticket_id: int) -> bool:
+    async def book_ticket(ticket_id: int) -> (TicketPlace, bool):
         if lock_ticket(ticket_id):
             try:
                 update_data = {
@@ -47,19 +47,16 @@ class TicketService:
 
                 if updated_ticket:
                     unlock_ticket(ticket_id)
-                    return True
-
-                unlock_ticket(ticket_id)
-                return False
+                    return updated_ticket, True
+                return None, False
             except Exception as e:
                 print(f"Error updating ticket: {e}")
+                return None, False
+            finally:
                 unlock_ticket(ticket_id)
-                return False
-
-        return False
 
     @staticmethod
-    async def purchase_ticket(ticket_id: int) -> bool:
+    async def purchase_ticket(ticket_id: int) -> (TicketPlace, bool):
         payment_successful = True  # Заглушка
         result = await db.tickets.find_one({"ticket_id": ticket_id})
         if payment_successful and result["status"] == 'booked':
@@ -77,16 +74,14 @@ class TicketService:
                 )
 
                 if updated_ticket:
-                    # unlock_ticket(ticket_id)
-                    return True
+                    return updated_ticket, True
 
                 print(f"Ticket with ID {ticket_id} not found for purchase.")
-                return False
+                return None, False
             except Exception as e:
                 print(f"Error purchasing ticket: {e}")
-                return False
-
-        return False
+                return None, False
+        return None, False
 
     @staticmethod
     async def get_ticket(ticket_id):

@@ -47,8 +47,8 @@ async def get_cached_station(station_id):
 
 def lock_ticket(ticket_id):
     try:
-        tickets_lock = hazelcast_client.cp_subsystem.get_lock(ticket_id)
-        if tickets_lock.try_lock():
+        ticket_lock = hazelcast_client.cp_subsystem.get_lock("myLock@group"+ticket_id).blocking()
+        if ticket_lock.try_lock() != ticket_lock.INVALID_FENCE:
             logger.info(f"Ticket ID {ticket_id} locked successfully.")
             return True
         logger.warning(f"Ticket ID {ticket_id} is already locked.")
@@ -60,8 +60,8 @@ def lock_ticket(ticket_id):
 
 def unlock_ticket(ticket_id):
     try:
-        tickets_lock = hazelcast_client.cp_subsystem.get_lock(ticket_id)
-        tickets_lock.unlock()
+        ticket_lock = hazelcast_client.cp_subsystem.get_lock("myLock@group"+ticket_id).blocking()
+        ticket_lock.unlock()
         logger.info(f"Ticket ID {ticket_id} unlocked successfully.")
     except Exception as e:
         logger.error(f"Error unlocking ticket ID {ticket_id}: {e}")
