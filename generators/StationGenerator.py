@@ -1,12 +1,15 @@
-import requests
 import random
+import requests
 
 
 def generate_station_data(station_id):
     # Генерируем некоторые данные для станции
     name = f"Станция {station_id}"
     region = random.choice(
-        ["Московская область", "Ленинградская область", "Нижегородская область", "Краснодарский край"])
+        ["Московская область",
+         "Ленинградская область",
+         "Нижегородская область",
+         "Краснодарский край"])
     return {
         "station_id": station_id,
         "name": name,
