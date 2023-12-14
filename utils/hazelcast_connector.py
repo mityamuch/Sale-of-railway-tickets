@@ -25,6 +25,7 @@ def cache_station(station_id, station_data):
         return result
     except Exception as e:
         logger.error(f"Error caching station data for station ID {station_id}: {e}")
+        return None
 
 
 async def get_cached_station(station_id):
@@ -36,8 +37,8 @@ async def get_cached_station(station_id):
         if station_data is None:
             logger.warning(f"No data found in cache for station ID: {station_id}")
             return None
-        else:
-            logger.info(f"Retrieved data from cache for station ID: {station_id}")
+
+        logger.info(f"Retrieved data from cache for station ID: {station_id}")
         return station_data
     except Exception as e:
         logger.error(f"Error retrieving station data for station ID {station_id}: {e}")

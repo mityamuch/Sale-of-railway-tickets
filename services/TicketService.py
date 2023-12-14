@@ -20,8 +20,8 @@ class TicketService:
         for train in trains:
             try:
                 # Получение билетов для каждого поезда из MongoDB
-                train_tickets = db.ticket_places.find({"train_id": train["train_id"],
-                                                       "status": "free"})
+                train_tickets = db.tickets.find({"train_id": train["train_id"],
+                                                 "status": "free"})
                 for ticket in train_tickets:
                     tickets.append(TicketPlace(**ticket))
             except Exception as e:
@@ -39,13 +39,14 @@ class TicketService:
                         "booking_time": datetime.now()
                     }
                 }
-                updated_ticket = await db.ticket_places.find_one_and_update(
+                updated_ticket = await db.tickets.find_one_and_update(
                     {"ticket_id": ticket_id},
                     update_data,
                     return_document=ReturnDocument.AFTER
                 )
 
                 if updated_ticket:
+                    unlock_ticket(ticket_id)
                     return True
 
                 unlock_ticket(ticket_id)
@@ -58,10 +59,10 @@ class TicketService:
         return False
 
     @staticmethod
-    def purchase_ticket(ticket_id: int) -> bool:
+    async def purchase_ticket(ticket_id: int) -> bool:
         payment_successful = True  # Заглушка
-
-        if payment_successful:
+        result = await db.tickets.find_one({"ticket_id": ticket_id})
+        if payment_successful and result["status"] == 'booked':
             try:
                 update_data = {
                     "$set": {
@@ -69,15 +70,15 @@ class TicketService:
                         "payment_time": datetime.now()
                     }
                 }
-                updated_ticket = db.ticket_places.find_one_and_update(
+                updated_ticket = await db.tickets.find_one_and_update(
                     {"ticket_id": ticket_id},
                     update_data,
                     return_document=ReturnDocument.AFTER
                 )
 
-                #if updated_ticket:
-                    #unlock_ticket(ticket_id)
-                    #return True
+                if updated_ticket:
+                    # unlock_ticket(ticket_id)
+                    return True
 
                 print(f"Ticket with ID {ticket_id} not found for purchase.")
                 return False
@@ -85,17 +86,25 @@ class TicketService:
                 print(f"Error purchasing ticket: {e}")
                 return False
 
-        print("Payment failed")
         return False
 
     @staticmethod
     async def get_ticket(ticket_id):
-        return await db.tickets.find_one({"_id": ticket_id})
-
-    @staticmethod
-    async def update_ticket_status(ticket_id, status):
-        await db.tickets.update_one({"_id": ticket_id}, {"$set": {"status": status}})
+        result = await db.tickets.find_one({"ticket_id": ticket_id})
+        if result:
+            return result
+        return None
 
     @staticmethod
     async def add_ticket(ticket_data):
-        return await db.tickets.insert_one(ticket_data)
+        ticket_data.status = "free"
+        ticket_data.booking_time = datetime(1, 1, 1, 0, 0, 0)
+        ticket_data.payment_time = datetime(1, 1, 1, 0, 0, 0)
+        existing_ticket = await db.tickets.find_one({"ticket_id": ticket_data.ticket_id})
+        if existing_ticket:
+            return None
+        ticket_dict = ticket_data.dict()
+        insert_result = await db.tickets.insert_one(ticket_dict)
+        inserted_ticket = await db.tickets.find_one({"_id": insert_result.inserted_id})
+
+        return inserted_ticket

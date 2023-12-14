@@ -6,19 +6,28 @@ from services.TrainService import TrainService
 router = APIRouter()
 
 
-@router.post("/trains/", response_model=Train)
+@router.post("/", response_model=Train, responses={
+    409: {"description": "Поезд с таким ID уже существует"}
+})
 async def add_train(train_data: Train):
-    result = await TrainService.initialize_train(train_data.dict())
+    result = await TrainService.initialize_train(train_data.model_dump())
+    if result is None:
+        raise HTTPException(status_code=409, detail="Поезд с таким ID уже существует")
     return Train(**result)
 
 
-@router.get("/{train_id}", response_model=Train)
+@router.get("/{train_id}", response_model=Train, responses={
+    404: {"description": "Поезд не найден"},
+    500: {"description": "Ошибка сервера"},
+})
 async def get_train(train_id: int):
-    result = await TrainService.get_train(train_id)
-    if result:
-        return Train(**result)
 
-    raise HTTPException(status_code=404, detail="Train not found")
+    result = await TrainService.get_train(train_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Поезд не найден")
+    if isinstance(result, Exception):
+        raise HTTPException(status_code=500, detail="Ошибка сервера")
+    return Train(**result)
 
 
 @router.get("/available/", response_model=List[Train])
@@ -29,19 +38,12 @@ async def available_trains(departure_station_id: int, arrival_station_id: int, d
     return [Train(**result) for result in results]
 
 
-@router.put("/{train_id}/", response_model=Train)
-async def update_train(train_id: int, train_data: Train):
-    result = await TrainService.update_train(train_id, train_data.dict())
-    if result:
-        return Train(**result)
-
-    raise HTTPException(status_code=404, detail="Train not found")
-
-
-@router.delete("/{train_id}/")
+@router.delete("/{train_id}/", responses={
+    404: {"description": "Поезд не найден"},
+})
 async def delete_train(train_id: int):
     success = await TrainService.delete_train(train_id)
     if success:
         return {"message": "Train deleted successfully"}
 
-    raise HTTPException(status_code=404, detail="Train not found")
+    raise HTTPException(status_code=404, detail="Поезд не найден")

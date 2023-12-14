@@ -17,4 +17,10 @@ class StationService:
 
     @staticmethod
     async def get_station(station_id):
-        return await get_cached_station(station_id)
+        result = await get_cached_station(station_id)
+        if result is None:
+            station = await db.stations.find_one({"station_id": station_id})
+            if not station:
+                return None
+            cache_station(station["station_id"], station)
+        return result
