@@ -47,7 +47,8 @@ async def get_cached_station(station_id):
 
 def lock_ticket(ticket_id):
     try:
-        ticket_lock = hazelcast_client.cp_subsystem.get_lock("myLock@group"+str(ticket_id)).blocking()
+        ticket_lock = hazelcast_client.cp_subsystem.get_lock("myLock@group" +
+                                                             str(ticket_id)).blocking()
         fence = ticket_lock.try_lock()
         if fence != ticket_lock.INVALID_FENCE:
             logger.info(f"Ticket ID {ticket_id} locked successfully.")
@@ -61,7 +62,8 @@ def lock_ticket(ticket_id):
 
 def unlock_ticket(ticket_id):
     try:
-        ticket_lock = hazelcast_client.cp_subsystem.get_lock("myLock@group"+str(ticket_id)).blocking()
+        ticket_lock = hazelcast_client.cp_subsystem.get_lock("myLock@group" +
+                                                             str(ticket_id)).blocking()
         ticket_lock.unlock()
         logger.info(f"Ticket ID {ticket_id} unlocked successfully.")
     except Exception as e:

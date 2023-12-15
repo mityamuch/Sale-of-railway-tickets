@@ -2,8 +2,13 @@ from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, HTTPException
-from models.ticket import TicketPlace, TicketNotFoundException, TicketAlreadyBookedException, TicketLockFailedException, \
-    TicketUpdateException, TicketNotBookedException, TicketPurchaseFailedException
+from models.ticket import (TicketPlace,
+                           TicketNotFoundException,
+                           TicketAlreadyBookedException,
+                           TicketLockFailedException,
+                           TicketUpdateException,
+                           TicketNotBookedException,
+                           TicketPurchaseFailedException)
 from services.TicketService import TicketService
 
 router = APIRouter()
@@ -31,7 +36,7 @@ async def book_ticket(ticket_id: int):
 
 @router.post("/purchase/{ticket_id}", response_model=bool, responses={
     404: {"description": "Билет не найден"},
-    400: {"description": "Билет не забронирован или уже куплен"},
+    400: {"description": "Билет не забронирован"},
     500: {"description": "Ошибка произведения оплаты"},
 })
 async def purchase_ticket(ticket_id: int):
@@ -41,7 +46,7 @@ async def purchase_ticket(ticket_id: int):
     except TicketNotFoundException:
         raise HTTPException(status_code=404, detail="Билет не найден")
     except TicketNotBookedException:
-        raise HTTPException(status_code=400, detail="Билет не забронирован или уже куплен")
+        raise HTTPException(status_code=400, detail="Билет не забронирован")
     except TicketPurchaseFailedException as e:
         raise HTTPException(status_code=500, detail=str(e))
 

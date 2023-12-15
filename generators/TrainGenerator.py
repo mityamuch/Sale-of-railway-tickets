@@ -7,7 +7,7 @@ import requests
 def generate_train_data(train_id):
     return {
         "train_id": train_id,
-        "route_id": random.choice([i for i in range(0, 50)]),
+        "route_id": random.choice(list(range(0, 50))),
         "departure_date": str(datetime.datetime.now()),
         "arrival_date": str(datetime.datetime.now())
     }

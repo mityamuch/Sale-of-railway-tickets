@@ -1,8 +1,14 @@
 from datetime import datetime
 from typing import List
 from pymongo import ReturnDocument
-from models.ticket import TicketPlace, TicketUpdateException, TicketLockFailedException, TicketAlreadyBookedException, \
-    TicketNotFoundException, TicketPurchaseFailedException, TicketNotBookedException, TicketSearchFailedException
+from models.ticket import (TicketPlace,
+                           TicketUpdateException,
+                           TicketLockFailedException,
+                           TicketAlreadyBookedException,
+                           TicketNotFoundException,
+                           TicketPurchaseFailedException,
+                           TicketNotBookedException,
+                           TicketSearchFailedException)
 from utils.elasticsearch_connector import search_trains
 from utils.hazelcast_connector import lock_ticket, unlock_ticket
 from utils.mongo_setup import db

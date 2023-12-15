@@ -7,13 +7,13 @@ import requests
 def generate_ticket_data(ticket_id):
     return {
         "ticket_id": ticket_id,
-        "train_id": random.choice([i for i in range(0,20)]),
-        "seat_number": random.choice([i for i in range(0, 50)]),
+        "train_id": random.choice(list(range(0, 20))),
+        "seat_number": random.choice(list(range(0, 50))),
         "status": "string",
         "booking_time":  str(datetime.datetime.now()),
-        "price": random.choice([i for i in (100,1000,10000)]),
+        "price": random.choice(list((100, 1000, 10000))),
         "payment_time":  str(datetime.datetime.now()),
-        "route_id": random.choice([i for i in range(0, 50)]),
+        "route_id": random.choice(list(range(0, 50))),
     }
 
 
