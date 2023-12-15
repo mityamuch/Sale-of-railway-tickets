@@ -32,7 +32,8 @@ class TicketService:
                 async for ticket in train_tickets:
                     tickets.append(TicketPlace(**ticket))
             except Exception as e:
-                raise TicketSearchFailedException(f"Error fetching tickets for train {train['train_id']}: {e}")
+                raise TicketSearchFailedException(
+                    f"Error fetching tickets for train {train['train_id']}: {e}")
 
         return tickets
 
