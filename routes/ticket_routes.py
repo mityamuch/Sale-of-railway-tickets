@@ -49,7 +49,7 @@ async def purchase_ticket(ticket_id: int):
 @router.get("/search-tickets/", response_model=List[TicketPlace])
 async def search_tickets_route(departure_station: str, arrival_station: str, departure_date: datetime):
     try:
-        return TicketService.search_tickets(departure_station, arrival_station, departure_date)
+        return await TicketService.search_tickets(departure_station, arrival_station, departure_date)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

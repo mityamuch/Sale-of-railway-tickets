@@ -35,3 +35,7 @@ class TicketNotBookedException(Exception):
 
 class TicketPurchaseFailedException(Exception):
     pass
+
+
+class TicketSearchFailedException(Exception):
+    pass

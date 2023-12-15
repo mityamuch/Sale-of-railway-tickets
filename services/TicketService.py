@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List
 from pymongo import ReturnDocument
 from models.ticket import TicketPlace, TicketUpdateException, TicketLockFailedException, TicketAlreadyBookedException, \
-    TicketNotFoundException, TicketPurchaseFailedException, TicketNotBookedException
+    TicketNotFoundException, TicketPurchaseFailedException, TicketNotBookedException, TicketSearchFailedException
 from utils.elasticsearch_connector import search_trains
 from utils.hazelcast_connector import lock_ticket, unlock_ticket
 from utils.mongo_setup import db
@@ -11,8 +11,8 @@ from utils.mongo_setup import db
 class TicketService:
 
     @staticmethod
-    def search_tickets(departure_station: str,
-                       arrival_station: str, departure_date: datetime) -> List[TicketPlace]:
+    async def search_tickets(departure_station: str,
+                             arrival_station: str, departure_date: datetime) -> List[TicketPlace]:
         trains = search_trains(departure_station,
                                arrival_station,
                                departure_date)
@@ -23,10 +23,10 @@ class TicketService:
                 # Получение билетов для каждого поезда из MongoDB
                 train_tickets = db.tickets.find({"train_id": train["train_id"],
                                                  "status": "free"})
-                for ticket in train_tickets:
+                async for ticket in train_tickets:
                     tickets.append(TicketPlace(**ticket))
             except Exception as e:
-                print(f"Error fetching tickets for train {train['train_id']}: {e}")
+                raise TicketSearchFailedException(f"Error fetching tickets for train {train['train_id']}: {e}")
 
         return tickets
 
@@ -53,7 +53,6 @@ class TicketService:
                 return True
             raise TicketUpdateException("Ошибка при обновлении билета")
         except Exception as e:
-            print(f"Error updating ticket: {e}")
             raise TicketUpdateException(f"Внутренняя ошибка сервера: {e}")
         finally:
             unlock_ticket(ticket_id)
