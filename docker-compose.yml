@@ -1,40 +1,143 @@
 version: '3.7'
 
+x-mongodb-healthcheck: &mongodb-healthcheck
+  healthcheck:
+    test: echo 'db.runCommand("ping").ok' | mongosh 127.0.0.1:27017/test --quiet
+    interval: 10s
+    timeout: 10s
+    retries: 5
+    start_period: 40s
+
 services:
-  elasticsearch:
+  elasticsearch-master:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.3
     environment:
-      - discovery.type=single-node
-      - ELASTIC_USERNAME=elastic
-      - ELASTIC_PASSWORD=your_password
-    ports:
-      - 9200:9200
-      - 9300:9300
+      - node.name=es-master
+      - cluster.name=es-docker-cluster
+      - discovery.seed_hosts=elasticsearch-data1,elasticsearch-data2,elasticsearch-data3
+      - cluster.initial_master_nodes=es-master
+      - node.roles=master
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
     volumes:
-      - esdata:/usr/share/elasticsearch/data
+      - esdata1:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - elasticnet
+
+  elasticsearch-data1:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.3
+    environment:
+      - node.name=es-data1
+      - cluster.name=es-docker-cluster
+      - discovery.seed_hosts=elasticsearch-master,elasticsearch-data2,elasticsearch-data3
+      - node.roles=data
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    volumes:
+      - esdata2:/usr/share/elasticsearch/data
+    networks:
+      - elasticnet
+
+  elasticsearch-data2:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.3
+    environment:
+      - node.name=es-data2
+      - cluster.name=es-docker-cluster
+      - discovery.seed_hosts=elasticsearch-master,elasticsearch-data1,elasticsearch-data3
+      - node.roles=data
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    volumes:
+      - esdata3:/usr/share/elasticsearch/data
+    networks:
+      - elasticnet
+
+  elasticsearch-data3:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.3
+    environment:
+      - node.name=es-data3
+      - cluster.name=es-docker-cluster
+      - discovery.seed_hosts=elasticsearch-master,elasticsearch-data1,elasticsearch-data2
+      - node.roles=data
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    volumes:
+      - esdata4:/usr/share/elasticsearch/data
     networks:
       - elasticnet
 
   hazelcast:
     image: hazelcast/hazelcast:5.3.0
     ports:
-      - 5701:5701
+      - "5701:5701"
     networks:
       - elasticnet
 
-  mongodb:
-    restart: always
+  mongo_db_node_01:
     image: mongo:latest
-    ports:
-      - 27017:27017
+    <<: [ *mongodb-healthcheck ]
     volumes:
-      - mongodata:/data/db
+      - mongodata1:/data/mongo_node_01:/data/db
+    command: mongod --replSet docker-replicaset
+    ports:
+      - "27017:27017"
     networks:
       - elasticnet
+
+  mongo_db_node_02:
+    image: mongo:latest
+    <<: [ *mongodb-healthcheck ]
+    volumes:
+      - mongodata2:/data/mongo_node_02:/data/db
+    command: mongod --replSet docker-replicaset
+    ports:
+      - "27018:27017"
+    networks:
+      - elasticnet
+
+  mongo_db_node_03:
+    image: mongo:latest
+    <<: [ *mongodb-healthcheck ]
+    volumes:
+      - mongodata3:/data/mongo_node_03:/data/db
+    command: mongod --replSet docker-replicaset
+    ports:
+      - "27019:27017"
+    networks:
+      - elasticnet
+
+  mongo_cluster_init:
+    image: mongo:latest
+    depends_on:
+      mongo_db_node_01:
+        condition: service_healthy
+      mongo_db_node_02:
+        condition: service_healthy
+      mongo_db_node_03:
+        condition: service_healthy
+    volumes:
+      - ./init-mongo.js:/init-mongo.js:ro
+    entrypoint: [ "mongosh", "--host", "host.docker.internal", "--port", "27017", "--file", "/init-mongo.js" ]
+    networks:
+      - elasticnet
+
 
 volumes:
-  esdata:
-  mongodata:
+  esdata1:
+  esdata2:
+  esdata3:
+  esdata4:
+  mongodata1:
+  mongodata2:
+  mongodata3:
+  init-mongo.js:
 
 networks:
   elasticnet:

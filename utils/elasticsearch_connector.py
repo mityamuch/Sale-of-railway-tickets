@@ -1,10 +1,11 @@
+import os
 import logging
 import coloredlogs
 from elasticsearch import Elasticsearch, exceptions
 
 from utils.mongo_setup import db
 
-ELASTICSEARCH_URL = "http://localhost:9200"
+ELASTICSEARCH_URL = ELASTICSEARCH_URI
 ELASTICSEARCH_USERNAME = "elastic"
 ELASTICSEARCH_PASSWORD = "your_password"
 
@@ -20,6 +21,7 @@ client = Elasticsearch(
     retry_on_status=(),
     max_retries=10,
 )
+
 
 
 def create_train_index():

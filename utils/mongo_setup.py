@@ -1,13 +1,15 @@
+import os
 import motor.motor_asyncio
 from pymongo import MongoClient
 
 # Асинхронный клиент
-client = motor.motor_asyncio.AsyncIOMotorClient('mongodb://localhost:27017')
+client = motor.motor_asyncio.AsyncIOMotorClient("mongodb://localhost:27017")
+mongo_db = os.getenv('MONGO_DB')
 
-db = client.railway_ticket_system
+db = client[str(mongo_db)]
 
 # Синхронный клиент (для настройки шардинга и других административных задач)
-sync_client = MongoClient('mongodb://localhost:27017')
+sync_client = MongoClient(os.getenv('MONGO_DB'))
 
 
 def setup_sharding():
